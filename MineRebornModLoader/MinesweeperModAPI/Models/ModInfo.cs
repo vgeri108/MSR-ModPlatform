@@ -6,6 +6,8 @@ public sealed class ModInfo
     public required string Name { get; init; }
     public required string Version { get; init; }
     public required string Author { get; init; }
+    public required string LicenceType { get; init; }
+    public required string LicenceInfo { get; init; }
 
     public string Description { get; init; } = string.Empty;
 }
