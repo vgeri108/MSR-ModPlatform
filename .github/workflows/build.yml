@@ -26,3 +26,13 @@ jobs:
 
       - name: Build
         run: dotnet build MineRebornModLoader/ModLoader/MinesweeperModLoader.csproj --configuration Release --no-restore
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: MinesweeperModLoader
+          path: |
+            MineRebornModLoader/ModLoader/bin/Release/net10.0/
+            MineRebornModLoader/MinesweeperModAPI/bin/Release/net10.0/
+          if-no-files-found: error
+          retention-days: 14
