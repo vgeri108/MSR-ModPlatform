@@ -1,0 +1,28 @@
+name: Build ModLoader
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    name: Build MinesweeperModLoader
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup .NET 10
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Restore
+        run: dotnet restore MineRebornModLoader/ModLoader/MinesweeperModLoader.csproj
+
+      - name: Build
+        run: dotnet build MineRebornModLoader/ModLoader/MinesweeperModLoader.csproj --configuration Release --no-restore
