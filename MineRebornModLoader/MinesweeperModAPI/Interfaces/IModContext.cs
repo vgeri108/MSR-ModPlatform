@@ -6,6 +6,8 @@ public interface IModContext
 {
     Game Game { get; }
 
+    IModManager ModManager { get; }
+
     void Draw();
 
     void HandleGameOver();

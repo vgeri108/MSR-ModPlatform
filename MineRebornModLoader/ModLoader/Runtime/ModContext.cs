@@ -11,17 +11,20 @@ internal sealed class ModContext : IModContext
     private readonly Action<string> loadGame;
 
     public Game Game => game;
+    public IModManager ModManager { get; }
 
     public ModContext(
         Game game,
         Action draw,
         Action handleGameOver,
-        Action<string> loadGame)
+        Action<string> loadGame,
+        IModManager modManager)
     {
         this.game = game;
         this.draw = draw;
         this.handleGameOver = handleGameOver;
         this.loadGame = loadGame;
+        ModManager = modManager;
     }
 
     public void Draw() => draw();
@@ -32,5 +35,6 @@ internal sealed class ModContext : IModContext
     {
         this.game = game;
     }
+
     public void LoadGame(string path) => loadGame(path);
 }

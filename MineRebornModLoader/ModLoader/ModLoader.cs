@@ -4,10 +4,11 @@ using MinesweeperModAPI.Interfaces;
 using MinesweeperModLoader.Loading;
 using MinesweeperModLoader.Models;
 using MinesweeperModLoader.Runtime;
+using MinesweeperModAPI.Models;
 
 namespace MinesweeperModLoader;
 
-public sealed class ModLoader
+public sealed class ModLoader : IModManager
 {
     private readonly List<LoadedMod> mods = [];
 
@@ -47,6 +48,7 @@ public sealed class ModLoader
         }
     }
 
+    
     private void LoadMod(
         string dllPath,
         Game game,
@@ -54,12 +56,12 @@ public sealed class ModLoader
         Action handleGameOver,
         Action<string> loadGame)
     {
-        ModLoadContext loadContext = new(dllPath);
+        string fullPath = Path.GetFullPath(dllPath);
+        ModLoadContext loadContext = new(fullPath);
 
         try
         {
-            Assembly assembly = loadContext.LoadFromAssemblyPath(
-                Path.GetFullPath(dllPath));
+            Assembly assembly = loadContext.LoadFromAssemblyPath(fullPath);
 
             Type[] modTypes = assembly.GetTypes()
                 .Where(type =>
@@ -68,8 +70,10 @@ public sealed class ModLoader
                 .ToArray();
 
             if (modTypes.Length == 0)
+            {
                 throw new InvalidOperationException(
                     "No valid mod implementation found.");
+            }
 
             foreach (Type modType in modTypes)
             {
@@ -87,7 +91,12 @@ public sealed class ModLoader
                         $"Duplicate mod ID: {instance.Info.Id}");
                 }
 
-                ModContext context = new(game, draw, handleGameOver, loadGame);
+                ModContext context = new(
+                    game,
+                    draw,
+                    handleGameOver,
+                    loadGame,
+                    this);
 
                 instance.OnLoad(context);
 
@@ -96,6 +105,13 @@ public sealed class ModLoader
         }
         catch
         {
+            foreach (LoadedMod mod in mods
+                .Where(mod => ReferenceEquals(mod.LoadContext, loadContext))
+                .ToArray())
+            {
+                mods.Remove(mod);
+            }
+
             loadContext.Unload();
             throw;
         }
@@ -179,5 +195,13 @@ public sealed class ModLoader
             throw new InvalidOperationException(
                 "Mod information contains missing required fields.");
         }
+    }
+    public IReadOnlyList<ModEntry> GetMods()
+    {
+        return mods
+            .Select(mod => new ModEntry(
+                mod.Info,
+                mod.IsEnabled))
+            .ToArray();
     }
 }
