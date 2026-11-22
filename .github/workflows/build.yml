@@ -1,38 +1,110 @@
-name: Build ModLoader
+name: MSR-ModPlatform Release
 
 on:
   push:
-    branches: [ main ]
-  pull_request:
-    branches: [ main ]
+    branches:
+      - main
   workflow_dispatch:
+
+permissions:
+  contents: write
 
 jobs:
   build:
-    name: Build MinesweeperModLoader
     runs-on: windows-latest
 
     steps:
-      - name: Checkout repository
+      - name: Checkout
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
-      - name: Setup .NET 10
+      - name: Setup .NET
         uses: actions/setup-dotnet@v4
         with:
           dotnet-version: 10.0.x
 
+      - name: Generate Version
+        id: version
+        shell: pwsh
+        run: |
+          $versionBase = (Get-Content "VERSION" -Raw).Trim()
+
+          if ($versionBase -notmatch '^(\d+)\.(\d+)$') {
+            throw "VERSION must contain a value like 1.0 or 1.1"
+          }
+
+          $major = [int]$Matches[1]
+          $minor = [int]$Matches[2]
+
+          $prefix = "v$major.$minor."
+
+          $tags = git ls-remote --tags --refs origin "refs/tags/$prefix*"
+
+          if ($LASTEXITCODE -ne 0) {
+            throw "Failed to retrieve Git tags."
+          }
+
+          $patches = @(
+            foreach ($tag in $tags) {
+              if ($tag -match "refs/tags/v$major\.$minor\.(\d+)$") {
+                [int]$Matches[1]
+              }
+            }
+          )
+
+          $patch = if ($patches.Count -gt 0) {
+            ($patches | Measure-Object -Maximum).Maximum + 1
+          } else {
+            1
+          }
+
+          $version = "$major.$minor.$patch"
+
+          Write-Host "Generated version: v$version"
+          "version=$version" >> $env:GITHUB_OUTPUT
+
       - name: Restore
-        run: dotnet restore MineRebornModLoader/ModLoader/MinesweeperModLoader.csproj
+        run: dotnet restore "ModLoader/MinesweeperModLoader.csproj"
 
       - name: Build
-        run: dotnet build MineRebornModLoader/ModLoader/MinesweeperModLoader.csproj --configuration Release --no-restore
+        run: >
+          dotnet build "ModLoader/MinesweeperModLoader.csproj"
+          -c Release
+          --no-restore
 
-      - name: Upload build artifacts
+      - name: Prepare Release Files
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force -Path release | Out-Null
+
+          Copy-Item `
+            "MinesweeperModAPI/bin/Release/net10.0/MinesweeperModAPI.dll" `
+            "release/MinesweeperModAPI.dll"
+
+          Copy-Item `
+            "ModLoader/bin/Release/net10.0/MinesweeperModLoader.dll" `
+            "release/MinesweeperModLoader.dll"
+
+      - name: Upload DLL Artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: MinesweeperModLoader
+          name: MSR-ModPlatform-v${{ steps.version.outputs.version }}
           path: |
-            MineRebornModLoader/ModLoader/bin/Release/net10.0/
-            MineRebornModLoader/MinesweeperModAPI/bin/Release/net10.0/
+            release/MinesweeperModAPI.dll
+            release/MinesweeperModLoader.dll
           if-no-files-found: error
           retention-days: 14
+
+      - name: Create Draft Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v${{ steps.version.outputs.version }}
+          name: MSR-ModPlatform v${{ steps.version.outputs.version }}
+          draft: true
+          prerelease: false
+          generate_release_notes: true
+          fail_on_unmatched_files: true
+          files: |
+            release/MinesweeperModAPI.dll
+            release/MinesweeperModLoader.dll
