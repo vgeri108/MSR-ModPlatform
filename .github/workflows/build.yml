@@ -64,6 +64,19 @@ jobs:
           Write-Host "Generated version: v$version"
           "version=$version" >> $env:GITHUB_OUTPUT
 
+      - name: Show Repository Structure
+        shell: pwsh
+        run: |
+          Write-Host "Current directory:"
+          Get-Location
+
+          Write-Host "Project files:"
+          Get-ChildItem -Path . -Recurse -Filter "*.csproj" |
+            Select-Object -ExpandProperty FullName
+
+      - name: Restore
+        run: dotnet restore "./ModLoader/MinesweeperModLoader.csproj"
+
       - name: Restore
         run: dotnet restore "ModLoader/MinesweeperModLoader.csproj"
 
