@@ -13,4 +13,6 @@ public interface IModContext
     void HandleGameOver();
 
     void LoadGame(string path);
+
+    IDisposable AddMenuItem(string menuId, string title, Action onClick);
 }

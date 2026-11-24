@@ -19,7 +19,8 @@ public sealed class ModLoader : IModManager
         Game game,
         Action draw,
         Action handleGameOver,
-        Action<string> loadGame)
+        Action<string> loadGame,
+        Func<string, string, Action, IDisposable> addMenuItem)
     {
         Directory.CreateDirectory(modsDirectory);
 
@@ -27,7 +28,7 @@ public sealed class ModLoader : IModManager
         {
             try
             {
-                LoadMod(dllPath, game, draw, handleGameOver, loadGame);
+                LoadMod(dllPath, game, draw, handleGameOver, loadGame, addMenuItem);
             }
             catch (Exception ex)
             {
@@ -54,7 +55,8 @@ public sealed class ModLoader : IModManager
         Game game,
         Action draw,
         Action handleGameOver,
-        Action<string> loadGame)
+        Action<string> loadGame,
+        Func<string, string, Action, IDisposable> addMenuItem)
     {
         string fullPath = Path.GetFullPath(dllPath);
         ModLoadContext loadContext = new(fullPath);
@@ -96,7 +98,8 @@ public sealed class ModLoader : IModManager
                     draw,
                     handleGameOver,
                     loadGame,
-                    this);
+                    this,
+                    addMenuItem);
 
                 instance.OnLoad(context);
 
